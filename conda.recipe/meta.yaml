@@ -11,18 +11,19 @@ build:
   noarch: python
   script: python setup.py install --single-version-externally-managed --record=record.txt
   entry_points:
-    - pyviz = pyviz.cmd:main
-
-extra:
-  channels:
-    - pyviz
+    {% for group,epoints in sdata.get("entry_points",{}).items() %}
+    {% for entry_point in epoints %}
+    - {{ entry_point }}
+    {% endfor %}
+    {% endfor %}
 
 requirements:
   build:
+    # copied from pyproject.toml; conda build doesn't read
     - python
     - param >=1.7.0
-    - numpy
-    - setuptools
+    - setuptools >=30.3.0
+    - pyct >=0.4.4
   run:
     # 
     # Versions for pyviz-maintained packages pinned to ensure mutual compatibility
@@ -76,10 +77,13 @@ requirements:
 test:
   imports:
     - pyviz
-  commands:
-    - pyviz --install-examples pyviz-tutorial
+  requires:
+    {% for dep in sdata['extras_require']['tests'] %}
+    - "{{ dep }}"
+    {% endfor %}
+  # test commands as specified in tox.ini get run by pyctdev
 
 about:
-  home: pyviz.org
-  summary: How to solve visualization problems with Python tools
-  license: BSD 3-Clause
+  home: {{ sdata['url'] }}
+  summary: {{ sdata['description'] }}
+  license: {{ sdata['license'] }}

@@ -1,4 +1,4 @@
-include README.rst
-include LICENSE
+include README.md
+include LICENSE.tx
 include pyviz/.version
-include pyviz/*.yml
+
