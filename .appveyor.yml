@@ -9,8 +9,9 @@ environment:
 install:
   - "SET PATH=%CONDA%;%CONDA%\\Scripts;%PATH%"
   - "conda install -y -c pyviz/label/dev pyctdev && doit ecosystem_setup"
-  - "conda env create"
+  - "doit env_create --name=pyviz --python=%PY%"
   - "activate pyviz"
+  - "doit develop_install $CHANS_DEV -o examples -o examples_graphs -o examples_geo -o indirect -o temp"
   - "doit env_capture"
 
 build: off
@@ -18,4 +19,5 @@ build: off
 test_script:
   # (same as python pyviz/download_sample_data.py, but for quick tests)
   - "move examples/data/nyc_taxi_50k.parq examples/data/nyc_taxi_wide.parq"
+  - "pyviz fetch-data --path=examples"
   - "doit test_examples"

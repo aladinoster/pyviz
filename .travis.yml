@@ -12,7 +12,11 @@ env:
 stages:
   - test
   - name: conda_dev_package
-    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
+    if: branch = packaging
+#    if: tag =~ ^v(\d+|\.)+[a-z]\d+$
+  - name: pip_dev_package
+    if: branch = packaging
+#    if: tag =~ ^v(\d+|\.)+[a-z]\d+$    
   - name: conda_package
     if: tag =~ ^v(\d+|\.)+[^a-z]\d+$
   - doc
@@ -30,13 +34,15 @@ jobs:
         - conda config --set always_yes True
         - conda install -c pyviz/label/dev pyctdev && doit ecosystem_setup
       install:
-        - travis_wait 20 conda env create
-        - source activate pyviz
+        - doit env_create --name=pyviz --python=$PYENV_VERSION
+        - source activate pyviz 
+        - travis_wait 20 doit develop_install $CHANS_DEV -o examples -o examples_graphs -o examples_geo -o indirect -o temp
         - doit env_capture
       script:
-          # (same as python pyviz/download_sample_data.py, but for quick tests)      
-          - mv examples/data/nyc_taxi_50k.parq examples/data/nyc_taxi_wide.parq
-          - doit test_examples
+        # (same as python pyviz/download_sample_data.py, but for quick tests)      
+        - mv examples/data/nyc_taxi_50k.parq examples/data/nyc_taxi_wide.parq
+        - pyviz fetch-data --path=examples
+        - doit test_examples
 
     - <<: *default
       os: osx
@@ -44,72 +50,70 @@ jobs:
     - <<: *default
       stage: doc
       script:
-        - pip install -e . --no-deps
+        - doit develop_install $CHANS_DEV -o doc
         - python -c "import bokeh ; bokeh.sampledata.download()"
-        - python pyviz/download_sample_data.py data
-        - conda install -c pyviz/label/dev -c defaults -c conda-forge nbsite sphinx_ioam_theme
-        - cd doc/tutorial
-        - nbsite_nbpagebuild.py pyviz pyviz ../../notebooks . 1 0
-        - cd ..
-        - sphinx-build -b html . ./_build/html
+        - pyviz fetch-data --path=examples
+        - nbsite_nbpagebuild.py pyviz pyviz examples/ doc/ 1 0
+        - sphinx-build -b html ./doc ./doc/_build/html
         - nbsite_fix_links.py _build/html
         - cp -r ../notebooks/assets _build/html/tutorial/
         - touch ./_build/html/.nojekyll # for github pages
         - nbsite_cleandisthtml.py ./_build/html take_a_chance
         - cd ..
       deploy:
+#        - provider: pages
+#          skip_cleanup: true
+#          github_token: $GITHUB_TOKEN
+#          local_dir: ./doc/_build/html
+#          fqdn: pyviz.org
+#          on:
+#            tags: true
+#        - provider: pages
+#          skip_cleanup: true
+#          github_token: $GITHUB_TOKEN
+#          local_dir: ./doc/_build/html
+#          repo: ioam-docs/pyviz-master
+#          on:
+#            branch: master
         - provider: pages
           skip_cleanup: true
           github_token: $GITHUB_TOKEN
           local_dir: ./doc/_build/html
-          fqdn: pyviz.org
-          on:
-            tags: true
-        - provider: pages
-          skip_cleanup: true
-          github_token: $GITHUB_TOKEN
-          local_dir: ./doc/_build/html
-          repo: ioam-docs/pyviz-master
-          on:
-            branch: master
-        - provider: pages
-          skip_cleanup: true
-          github_token: $GITHUB_TOKEN
-          local_dir: ./doc/_build/html
-          repo: ioam-docs/pyviz-latest
+          repo: ioam-docs/pyviz-tmp
           on:
             all_branches: true
             condition: $TRAVIS_BRANCH != master
 
-    - &conda_pkg
-      stage: conda_dev_package
-      os: linux
-      env:
-        - PYTHON_VERSION="3.6"
-        - LABELS=$LABELS_DEV
+
+    ## dev packages
+
+    - &pip_pkg
+      env: PYPI=testpypi PYPIUSER=$TPPU PYPIPASS=$TPPP
+      stage: pip_dev_package
+      before_install: pip install pyctdev && doit ecosystem=pip ecosystem_setup
       install:
-        # Install conda
-        - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-            wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
-          else
-            wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-          fi
-        - bash miniconda.sh -b -p $HOME/miniconda
-        - export PATH="$HOME/miniconda/bin:$PATH"
-        - conda config --set always_yes yes --set changeps1 no
-        - conda update conda
-        - conda install anaconda-client conda-build=3.10.1
-        - conda install -c pyviz param numpy setuptools
-        - conda build -c https://conda.anaconda.org/pyviz conda.recipe
-      script:
-        - anaconda --token $ANACONDA_TOKEN upload $LABELS $(conda build -c https://conda.anaconda.org/pyviz conda.recipe --output)
+        - doit ecosystem=pip package_build $PKG_TEST_PYTHON --test-group=unit --sdist-install-build-deps
+        #- doit ecosystem=pip package_build $PKG_TEST_PYTHON --test-group=examples --sdist-install-build-deps
+      script: doit ecosystem=pip package_upload -u $PYPIUSER -p $PYPIPASS --pypi ${PYPI}
+
+    - &conda_pkg
+      <<: *default
+      stage: conda_dev_package
+      env: LABELS=$LABELS_DEV CHANS=$CHANS_DEV
+      install:
+        - doit package_build $CHANS $PKG_TEST_PYTHON --test-group=unit
+        - doit package_test $CHANS $PKG_TEST_PYTHON --test-group=examples --test-requires=examples --test-requires=examples_graphs --test-requires=examples_geo --test-requires=indirect --test-requires=temp
+      script: true #doit package_upload --token=$ANACONDA_TOKEN $LABELS
+
+    ## release packages
+
+#    - <<: *pip_pkg
+#      env: PYPI=pypi PYPIUSER=$PPU PYPIPASS=$PPP
+#      stage: pip_package
 
     - <<: *conda_pkg
       stage: conda_package
-      os: linux
-      env:
-        - PYTHON_VERSION="3.6"
-        - LABELS=$LABELS_REL
+      env: LABELS=$LABELS_REL CHANS=$CHANS_DEV
 
 
 notifications:
