@@ -1,4 +1,6 @@
 environment:
+  global:
+    CHANS_DEV: "-c pyviz/label/dev"
   matrix:
     - PY: "3.6"
       PYTHON: "C:\\Python36-x64"
@@ -6,15 +8,14 @@ environment:
 
 install:
   - "SET PATH=%CONDA%;%CONDA%\\Scripts;%PATH%"
-  - "conda config --set always_yes yes --set changeps1 no"
-  - "conda update conda"
+  - "conda install -y -c pyviz/label/dev pyctdev && doit ecosystem_setup"
   - "conda env create"
   - "activate pyviz"
-  - "conda env export"
-  - "conda list"
+  - "doit env_capture"
 
 build: off
 
 test_script:
-  - "ren data\\nyc_taxi_50k.parq nyc_taxi_wide.parq"
-  - "python etc\\test_notebooks.py"
+  # (same as python pyviz/download_sample_data.py, but for quick tests)
+  - "move examples/data/nyc_taxi_50k.parq examples/data/nyc_taxi_wide.parq"
+  - "doit test_examples"

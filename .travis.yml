@@ -1,13 +1,13 @@
-# We deliberately don't use travis's language=python option because
-# we install miniconda and use conda to get python. Additionally, 
-# Travis's auto-install of python doesn't work on osx images (see
-# https://github.com/travis-ci/travis-ci/issues/4729).
 language: generic
 
 env:
   global:
+    - CHANS_DEV="-c pyviz/label/dev"
+    - CHANS_REL="-c pyviz"
     - LABELS_DEV="--label dev"
     - LABELS_REL="--label dev --label main"
+    - PYENV_VERSION=3.6
+    - PKG_TEST_PYTHON="--test-python=py36"
 
 stages:
   - test
@@ -17,43 +17,29 @@ stages:
     if: tag =~ ^v(\d+|\.)+[^a-z]\d+$
   - doc
 
+# TODO: caching
+
 jobs:
   include:
     - &default
       stage: test
       os: linux
-      env:
-        - PYTHON_VERSION="3.6"
+      before_install:
+        - pip install pyctdev && doit miniconda_install && pip uninstall -y doit pyctdev
+        - export PATH="$HOME/miniconda/bin:$PATH" && hash -r
+        - conda config --set always_yes True
+        - conda install -c pyviz/label/dev pyctdev && doit ecosystem_setup
       install:
-        # Install conda
-        - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-            wget https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
-          else
-            wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-          fi
-        - bash miniconda.sh -b -p $HOME/miniconda
-        - export PATH="$HOME/miniconda/bin:$PATH"
-        - conda config --set always_yes yes --set changeps1 no
-        - conda update conda
-        # it might be faster to start from anaconda instead of miniconda
         - travis_wait 20 conda env create
         - source activate pyviz
-        # dependencies for tests etc
-        - pip install flake8
-        - conda env export
-        - conda list
+        - doit env_capture
       script:
-          - mv data/nyc_taxi_50k.parq data/nyc_taxi_wide.parq
-          # (same as python pyviz/download_sample_data.py, but for quick tests)
-          # python ./etc/test_notebooks.py lint
-          - python ./etc/test_notebooks.py
+          # (same as python pyviz/download_sample_data.py, but for quick tests)      
+          - mv examples/data/nyc_taxi_50k.parq examples/data/nyc_taxi_wide.parq
+          - doit test_examples
 
     - <<: *default
       os: osx
-      before_install:
-        # brew-installed geos interferes with cartopy?
-        - brew uninstall --ignore-dependencies geos gdal postgis
-      if: branch = master AND type != pull_request
 
     - <<: *default
       stage: doc
