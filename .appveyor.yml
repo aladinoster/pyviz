@@ -11,7 +11,7 @@ install:
   - "conda install -y -c pyviz/label/dev pyctdev && doit ecosystem_setup"
   - "doit env_create --name=pyviz --python=%PY%"
   - "activate pyviz"
-  - "doit develop_install $CHANS_DEV -o examples -o examples_graphs -o examples_geo -o indirect -o temp"
+  - "doit develop_install $CHANS_DEV -o examples -o examples_graphs -o examples_geo -o indirect"
   - "doit env_capture"
 
 build: off

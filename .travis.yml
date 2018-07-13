@@ -36,7 +36,7 @@ jobs:
       install:
         - doit env_create --name=pyviz --python=$PYENV_VERSION
         - source activate pyviz 
-        - travis_wait 20 doit develop_install $CHANS_DEV -o examples -o examples_graphs -o examples_geo -o indirect -o temp
+        - travis_wait 20 doit develop_install $CHANS_DEV -o examples -o examples_graphs -o examples_geo -o indirect
         - doit env_capture
       script:
         # (same as python pyviz/download_sample_data.py, but for quick tests)      
