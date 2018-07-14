@@ -53,13 +53,11 @@ jobs:
         - doit develop_install $CHANS_DEV -o doc
         - python -c "import bokeh ; bokeh.sampledata.download()"
         - pyviz fetch-data --path=examples
-        - nbsite_nbpagebuild.py pyviz pyviz examples/ doc/ 1 0
-        - sphinx-build -b html ./doc ./doc/_build/html
-        - nbsite_fix_links.py _build/html
-        - cp -r ../notebooks/assets _build/html/tutorial/
+        # note: still more nbsite simplification to go...
+        - nbsite generate-rst --org pyviz --project pyviz --repo pyviz --examples-path examples --doc-path doc --offset 1
+        - nbsite build --what=html --examples-path=examples --doc-path=doc --output=builtdocs
         - touch ./_build/html/.nojekyll # for github pages
         - nbsite_cleandisthtml.py ./_build/html take_a_chance
-        - cd ..
       deploy:
 #        - provider: pages
 #          skip_cleanup: true
