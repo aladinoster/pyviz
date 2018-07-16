@@ -1,6 +1,7 @@
 environment:
   global:
     CHANS_DEV: "-c pyviz/label/dev"
+    PIN: "--pin-deps"
   matrix:
     - PY: "3.6"
       PYTHON: "C:\\Python36-x64"
@@ -11,7 +12,7 @@ install:
   - "conda install -y -c pyviz/label/dev pyctdev && doit ecosystem_setup"
   - "doit env_create --name=pyviz --python=%PY%"
   - "activate pyviz"
-  - "doit develop_install $CHANS_DEV -o examples -o graphs -o geo -o indirect"
+  - "doit develop_install %CHANS_DEV% %PIN% --all-extras"
   - "doit env_capture"
 
 build: off

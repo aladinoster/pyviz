@@ -8,6 +8,7 @@ env:
     - LABELS_REL="--label dev --label main"
     - PYENV_VERSION=3.6
     - PKG_TEST_PYTHON="--test-python=py36"
+    - PIN="--pin-deps"
 
 stages:
   - test
@@ -20,6 +21,13 @@ stages:
   - name: conda_package
     if: tag =~ ^v(\d+|\.)+[^a-z]\d+$
   - doc
+  - name: unpinned_upcoming_trouble
+    if: branch = packaging
+#    if: type = cron
+  - name: test_packages
+    if: branch = packaging
+#    if: type = cron
+
 
 # TODO: caching
 
@@ -35,8 +43,8 @@ jobs:
         - conda install -c pyviz/label/dev pyctdev && doit ecosystem_setup
       before_script:
         - doit env_create --name=pyviz --python=$PYENV_VERSION
-        - source activate pyviz 
-        - travis_wait 20 doit develop_install $CHANS_DEV -o examples -o graphs -o geo -o indirect
+        - source activate pyviz
+        - travis_wait 20 doit develop_install $CHANS_DEV --all-extras $PIN
         - pip install msgpack # workaround for unfortunate combo of msgpack vs msgpack-python + no conda develop command + pkg_resources checking what's installed for entrypoints + msgpack/rise conflict via conda; need to investigate
         - doit env_capture
       script:
@@ -46,6 +54,25 @@ jobs:
         - doit test_examples
 
     - <<: *default
+      stage: unpinned_upcoming_trouble
+      env: PIN=
+
+    - &package_test
+      <<: *default
+      stage: test_packages
+      before_script: true
+      script:
+        - mkdir $HOME/tmp && cd $HOME/tmp
+        # TODO: pyctdev should probably support this whole thing	
+        - conda create -n pyviz-tutorial python=3.6
+        - source activate pyviz-tutorial
+        - conda install -c pyviz pyviz
+        - pyviz examples
+        - cd pyviz-examples
+        - conda install -c pyviz/label/dev nbsmoke
+        - pytest --nbsmoke-run -k ".ipynb"
+
+    - <<: *package_test
       os: osx
       # travis/osx is not set up like travis/linux      
       env: PYENV_VERSION=3.6.4
@@ -57,8 +84,10 @@ jobs:
       stage: doc
       script:
         - doit develop_install $CHANS_DEV -o doc
-        - python -c "import bokeh ; bokeh.sampledata.download()"
+        - bokeh sampledata
         - pyviz fetch-data --path=examples
+        # TODO: need to support skip for nbsite
+        - rm -rf examples/tutorials/exercises/Exercise*
         # note: still more nbsite simplification to go...
         - nbsite generate-rst --org pyviz --project pyviz --repo pyviz --examples-path examples --doc-path doc --offset 1
         - nbsite build --what=html --examples-path=examples --doc-path=doc --output=builtdocs
@@ -106,7 +135,7 @@ jobs:
       env: LABELS=$LABELS_DEV CHANS=$CHANS_DEV
       before_script:
         - doit package_build $CHANS $PKG_TEST_PYTHON --test-group=unit
-        - doit package_test $CHANS $PKG_TEST_PYTHON --test-group=examples --test-requires=examples --test-requires=graphs --test-requires=geo --test-requires=indirect --test-requires=temp
+        - doit package_test $CHANS $PKG_TEST_PYTHON --test-group=examples
       script: true #doit package_upload --token=$ANACONDA_TOKEN $LABELS
 
     ## release packages
