@@ -1,8 +1,4 @@
 environment:
-  global:
-    CHANS_DEV: "-c pyviz/label/dev"
-    DEPS: "--deps-as-pkg=pyviz"
-    PIN: "--pin-deps"
   matrix:
     - PY: "3.6"
       PYTHON: "C:\\Python36-x64"
