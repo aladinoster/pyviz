@@ -37,6 +37,7 @@ jobs:
         - doit env_create --name=pyviz --python=$PYENV_VERSION
         - source activate pyviz 
         - travis_wait 20 doit develop_install $CHANS_DEV -o examples -o graphs -o geo -o indirect
+        - pip install msgpack # workaround for unfortunate combo of msgpack vs msgpack-python + no conda develop command + pkg_resources checking what's installed for entrypoints
         - doit env_capture
       script:
         # (same as python pyviz/download_sample_data.py, but for quick tests)      
