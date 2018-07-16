@@ -36,7 +36,7 @@ jobs:
       install:
         - doit env_create --name=pyviz --python=$PYENV_VERSION
         - source activate pyviz 
-        - travis_wait 20 doit develop_install $CHANS_DEV -o examples -o examples_graphs -o examples_geo -o indirect
+        - travis_wait 20 doit develop_install $CHANS_DEV -o examples -o graphs -o geo -o indirect
         - doit env_capture
       script:
         # (same as python pyviz/download_sample_data.py, but for quick tests)      
@@ -100,7 +100,7 @@ jobs:
       env: LABELS=$LABELS_DEV CHANS=$CHANS_DEV
       install:
         - doit package_build $CHANS $PKG_TEST_PYTHON --test-group=unit
-        - doit package_test $CHANS $PKG_TEST_PYTHON --test-group=examples --test-requires=examples --test-requires=examples_graphs --test-requires=examples_geo --test-requires=indirect --test-requires=temp
+        - doit package_test $CHANS $PKG_TEST_PYTHON --test-group=examples --test-requires=examples --test-requires=graphs --test-requires=geo --test-requires=indirect --test-requires=temp
       script: true #doit package_upload --token=$ANACONDA_TOKEN $LABELS
 
     ## release packages
