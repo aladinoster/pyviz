@@ -93,12 +93,12 @@ jobs:
         - nbsite generate-rst --org pyviz --project pyviz --repo pyviz --examples-path examples --doc-path doc --offset 1
         - nbsite build --what=html --examples-path=examples --doc-path=doc --output=builtdocs
         - touch ./_build/html/.nojekyll # for github pages
-        - nbsite_cleandisthtml.py ./_build/html take_a_chance
+        - nbsite_cleandisthtml.py ./builtdocs take_a_chance
       deploy:
 #        - provider: pages
 #          skip_cleanup: true
 #          github_token: $GITHUB_TOKEN
-#          local_dir: ./doc/_build/html
+#          local_dir: ./builtdocs
 #          fqdn: pyviz.org
 #          on:
 #            tags: true
