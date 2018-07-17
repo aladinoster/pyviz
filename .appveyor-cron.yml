@@ -1,3 +1,5 @@
+# equivalent of travis test_packages stage (appveyor doesn't have stages)
+
 environment:
   matrix:
     - PY: "3.6"
